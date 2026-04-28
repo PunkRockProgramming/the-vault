@@ -750,7 +750,7 @@
           <div class="welcome-icon">🎬</div>
           <h2>What Are You In The Mood For?</h2>
           <p>Tell me a vibe, genre, or something you loved. I know your entire library and I'll find exactly what you need.</p>
-          <div class="quick-prompts">
+          <div class="quick-prompts" id="aiQuickPrompts">
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Something like No Country for Old Men</div>
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best horror I might have missed</div>
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Great standup for tonight</div>
@@ -759,6 +759,14 @@
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best thing to binge this weekend</div>
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Essential titles missing from my library</div>
             <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best music documentary I have</div>
+          </div>
+          <div class="quick-prompts" id="offlineQuickActions" style="display:none">
+            <div class="quick-prompt" onclick="offlineBrowse({})">🔍 Browse everything</div>
+            <div class="quick-prompt" onclick="offlineBrowse({surprise:true})">🎲 Surprise me tonight</div>
+            <div class="quick-prompt" onclick="offlineBrowse({status:'want'})">★ My Watchlist</div>
+            <div class="quick-prompt" onclick="offlineBrowse({genre:'horror'})">🩸 Horror</div>
+            <div class="quick-prompt" onclick="offlineBrowse({genre:'comedy'})">😂 Comedy</div>
+            <div class="quick-prompt" onclick="offlineBrowse({decade:'1990'})">📼 Best of the 90s</div>
           </div>
         </div>
       </div>

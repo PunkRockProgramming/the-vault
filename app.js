@@ -78,14 +78,34 @@ function updateAIStatus() {
   const dot = document.getElementById('aiDot');
   const txt = document.getElementById('aiStatusText');
   const banner = document.getElementById('offlineBanner');
+  const input = document.getElementById('aiInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const aiPrompts = document.getElementById('aiQuickPrompts');
+  const offlineActions = document.getElementById('offlineQuickActions');
+
   if (aiAvailable) {
-    dot.className = 'ai-dot'; txt.textContent = 'AI ONLINE'; banner.style.display = 'none';
+    dot.className = 'ai-dot';
+    txt.textContent = 'AI ONLINE';
+    banner.style.display = 'none';
+    input.disabled = false;
+    input.placeholder = 'Describe your mood, a genre, something you loved, or ask anything…';
+    sendBtn.disabled = aiLoading;
+    if (aiPrompts) aiPrompts.style.display = '';
+    if (offlineActions) offlineActions.style.display = 'none';
   } else {
-    dot.className = 'ai-dot offline'; txt.textContent = 'AI OFFLINE'; banner.style.display = 'flex';
+    dot.className = 'ai-dot offline';
+    txt.textContent = 'AI OFFLINE';
+    banner.style.display = 'flex';
+    input.disabled = true;
+    input.placeholder = 'AI unavailable — use Browse & Search';
+    sendBtn.disabled = true;
     const tab = document.getElementById('tabBrowse');
     if (!tab.querySelector('.tab-badge')) {
       const b = document.createElement('span'); b.className = 'tab-badge'; b.textContent = 'USE THIS'; tab.appendChild(b);
     }
+    if (aiPrompts) aiPrompts.style.display = 'none';
+    if (offlineActions) offlineActions.style.display = '';
+    switchTab('browse');
   }
 }
 
@@ -150,6 +170,21 @@ function clearAllFilters() {
 // ============================================================
 // BROWSE CONTROLS
 // ============================================================
+function offlineBrowse(opts = {}) {
+  if (opts.genre) {
+    activeGenres.add(opts.genre);
+    document.querySelector(`.filter-btn[onclick*="'${opts.genre}'"]`)?.classList.add('active');
+  }
+  if (opts.decade) document.getElementById('decadeFilter').value = opts.decade;
+  if (opts.status) {
+    statusFilter = opts.status;
+    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+    const map = { all:'sfAll', unwatched:'sfUnwatched', want:'sfWant', watched:'sfWatched' };
+    document.getElementById(map[opts.status])?.classList.add('active');
+  }
+  switchTab('browse');
+  if (opts.surprise) surpriseMe();
+}
 function setStatusFilter(filter) {
   statusFilter = filter;
   document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
@@ -527,7 +562,8 @@ async function sendAIMessage() {
     document.getElementById('thinking').outerHTML=`<div class="msg assistant"><div class="msg-bubble"><p>⚠️ AI unavailable. <a href="#" onclick="switchTab('browse');return false;" style="color:var(--accent)">Switch to Browse &amp; Search →</a></p></div></div>`;
     aiAvailable=false; updateAIStatus();
   }
-  aiLoading=false; document.getElementById('sendBtn').disabled=false;
+  aiLoading=false;
+  document.getElementById('sendBtn').disabled = !aiAvailable;
 }
 
 function updateChatControls() {
@@ -563,7 +599,7 @@ function newConversation() {
     <div class="welcome-icon">🎬</div>
     <h2>What Are You In The Mood For?</h2>
     <p>Tell me a vibe, genre, or something you loved. I know your entire library and I'll find exactly what you need.</p>
-    <div class="quick-prompts">
+    <div class="quick-prompts" id="aiQuickPrompts" ${aiAvailable === false ? 'style="display:none"' : ''}>
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Something like No Country for Old Men</div>
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best horror I might have missed</div>
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Great standup for tonight</div>
@@ -572,6 +608,14 @@ function newConversation() {
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best thing to binge this weekend</div>
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Essential titles missing from my library</div>
       <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best music documentary I have</div>
+    </div>
+    <div class="quick-prompts" id="offlineQuickActions" ${aiAvailable !== false ? 'style="display:none"' : ''}>
+      <div class="quick-prompt" onclick="offlineBrowse({})">🔍 Browse everything</div>
+      <div class="quick-prompt" onclick="offlineBrowse({surprise:true})">🎲 Surprise me tonight</div>
+      <div class="quick-prompt" onclick="offlineBrowse({status:'want'})">★ My Watchlist</div>
+      <div class="quick-prompt" onclick="offlineBrowse({genre:'horror'})">🩸 Horror</div>
+      <div class="quick-prompt" onclick="offlineBrowse({genre:'comedy'})">😂 Comedy</div>
+      <div class="quick-prompt" onclick="offlineBrowse({decade:'1990'})">📼 Best of the 90s</div>
     </div>
   </div>`;
   const ctrl = document.getElementById('chatControls');
