@@ -287,6 +287,25 @@ function getFiltered() {
   return results;
 }
 
+function buildGenreFilters() {
+  const counts = {};
+  ALL.forEach(item => item.tags.forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const top = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16)
+    .map(([g]) => g);
+
+  const row = document.getElementById('genreFilterRow');
+  row.querySelectorAll('.filter-btn').forEach(b => b.remove());
+  top.forEach(g => {
+    const btn = document.createElement('div');
+    btn.className = 'filter-btn' + (activeGenres.has(g) ? ' active' : '');
+    btn.textContent = g.charAt(0).toUpperCase() + g.slice(1);
+    btn.addEventListener('click', () => toggleGenre(btn, g));
+    row.appendChild(btn);
+  });
+}
+
 function buildFilterSummary() {
   const parts = [];
   const statusLabels = { unwatched: 'Unwatched', want: 'Watchlist', watched: 'Watched' };
@@ -342,21 +361,26 @@ function renderResults(results) {
 
   results.slice(0, 250).forEach(item => {
     const st = STATUS[item.title] || null;
-    const rating = META[item.title]?.rating;
+    const itemMeta = META[item.title] || {};
+    const rating = itemMeta.rating;
+    const hasNote = !!itemMeta.note;
     const c = document.createElement('div');
     c.className = 'result-card' +
       (st === 'watched' ? ' is-watched' : '') +
       (st === 'want' ? ' is-want' : '');
 
     const tagsHtml = item.tags.slice(0, 3).map(t => `<span class="rc-tag">${t}</span>`).join('');
-    const ratingHtml = rating ? `<div class="rc-rating">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>` : '';
+    const personalHtml = (rating || hasNote) ? `<div class="rc-personal">
+      ${rating ? `<span class="rc-stars">${'★'.repeat(rating)}</span>` : ''}
+      ${hasNote ? `<span class="rc-has-note">📝</span>` : ''}
+    </div>` : '';
 
     c.innerHTML = `
       <div class="rc-cat">${CAT[item.cat].icon} ${CAT[item.cat].label}</div>
       <div class="rc-title">${x(item.clean)}</div>
       ${item.year ? `<div class="rc-year">${item.year}</div>` : ''}
       ${tagsHtml ? `<div class="rc-tags">${tagsHtml}</div>` : ''}
-      ${ratingHtml}
+      ${personalHtml}
       <div class="rc-actions"></div>`;
 
     const actions = c.querySelector('.rc-actions');
@@ -671,6 +695,7 @@ document.addEventListener('keydown', e => {
 // INIT
 // ============================================================
 loadPersisted();
+buildGenreFilters();
 if (AI_ENABLED) {
   restoreAIConversation();
   checkAI();

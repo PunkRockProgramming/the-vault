@@ -501,8 +501,10 @@
   .rc-action.status-want { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.08); }
   .rc-action.status-watched { border-color: #4caf50; color: #4caf50; background: rgba(76,175,80,0.08); }
 
-  /* CARD RATING */
-  .rc-rating { font-size: 0.65rem; color: var(--accent); letter-spacing: 1px; margin-top: 2px; }
+  /* CARD PERSONAL INDICATORS */
+  .rc-personal { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .rc-stars { font-size: 0.65rem; color: var(--accent); letter-spacing: 1px; }
+  .rc-has-note { font-size: 0.65rem; color: var(--muted); }
 
   /* LIST VIEW */
   .results-grid.list-view { grid-template-columns: 1fr; }
@@ -809,16 +811,8 @@
         <button class="surprise-btn" onclick="surpriseMeWatchlist()">★ FROM WATCHLIST</button>
       </div>
 
-      <div class="filter-row">
+      <div class="filter-row" id="genreFilterRow">
         <span class="filter-row-label">GENRE:</span>
-        <div class="filter-btn" onclick="toggleGenre(this,'horror')">Horror</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'comedy')">Comedy</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'action')">Action</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'scifi')">Sci-Fi</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'thriller')">Thriller</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'drama')">Drama</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'animated')">Animated</div>
-        <div class="filter-btn" onclick="toggleGenre(this,'crime')">Crime</div>
       </div>
 
       <div class="status-filter-row">
