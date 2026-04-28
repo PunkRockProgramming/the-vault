@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Vault — Media Recommender</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a35;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --accent3: #64c8ff;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --pill-bg: #1e1e28;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  header {
+    padding: 14px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.9rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  .ai-status {
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.63rem; color: var(--muted);
+  }
+
+  .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .ai-dot.offline { background: var(--accent2); }
+  .ai-dot.checking { background: #888; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .stats-bar {
+    display: flex; gap: 20px;
+    padding: 8px 32px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; flex-shrink: 0;
+  }
+
+  .stat {
+    display: flex; align-items: center; gap: 7px;
+    white-space: nowrap;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem; color: var(--muted);
+  }
+
+  .stat strong { color: var(--accent); }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    padding: 0 32px; gap: 4px;
+  }
+
+  .tab {
+    padding: 10px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 1px;
+    cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s; user-select: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-badge {
+    background: var(--accent2); color: #000;
+    font-size: 0.52rem; padding: 1px 5px;
+    border-radius: 6px; font-weight: 700;
+  }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 230px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 18px 14px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .sidebar-section h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 9px;
+  }
+
+  .mood-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .chip {
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 11px;
+    font-size: 0.72rem; cursor: pointer;
+    transition: all 0.15s; color: var(--text); user-select: none;
+  }
+
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 500; }
+
+  .type-pills { display: flex; flex-direction: column; gap: 5px; }
+
+  .type-pill {
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 11px;
+    font-size: 0.76rem; cursor: pointer;
+    transition: all 0.15s; color: var(--text);
+    display: flex; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+
+  .type-pill .count { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); }
+  .type-pill:hover { border-color: var(--accent2); color: var(--accent2); }
+  .type-pill.active { border-color: var(--accent2); background: rgba(255,107,53,0.1); color: var(--accent2); }
+
+  /* PANELS */
+  .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .panel.active { display: flex; }
+
+  /* AI CHAT */
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .offline-banner {
+    background: rgba(255,107,53,0.1);
+    border-bottom: 1px solid rgba(255,107,53,0.25);
+    padding: 11px 24px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 0.8rem; color: var(--accent2);
+    flex-shrink: 0;
+  }
+
+  .offline-banner button {
+    margin-left: auto;
+    background: var(--accent2); color: #000;
+    border: none; border-radius: 6px;
+    padding: 5px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem; font-weight: 700;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+
+  .messages {
+    flex: 1; overflow-y: auto;
+    padding: 22px 26px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .msg { max-width: 820px; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .msg.user { align-self: flex-end; }
+  .msg.assistant { align-self: flex-start; width: 100%; }
+
+  .msg-bubble { padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; line-height: 1.65; }
+
+  .msg.user .msg-bubble { background: var(--accent); color: #000; font-weight: 500; border-radius: 12px 12px 2px 12px; }
+  .msg.assistant .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 2px 12px 12px 12px; }
+
+  .msg.assistant .msg-bubble h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 1.5px;
+    color: var(--accent); margin: 13px 0 6px;
+  }
+
+  .msg.assistant .msg-bubble h3:first-child { margin-top: 0; }
+  .msg.assistant .msg-bubble p { margin-bottom: 8px; }
+  .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg.assistant .msg-bubble ul { padding-left: 16px; margin: 7px 0; }
+  .msg.assistant .msg-bubble li { margin-bottom: 5px; }
+  .msg.assistant .msg-bubble strong { color: var(--accent); }
+  .msg.assistant .msg-bubble a { color: var(--accent); }
+
+  .thinking {
+    display: flex; gap: 6px; align-items: center;
+    padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 2px 12px 12px 12px; width: fit-content;
+  }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.1)} }
+
+  .welcome {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    flex: 1; gap: 14px; text-align: center; padding: 30px;
+    color: var(--muted);
+  }
+
+  .welcome-icon { font-size: 2.8rem; }
+
+  .welcome h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.7rem; letter-spacing: 3px; color: var(--text);
+  }
+
+  .welcome p { max-width: 400px; font-size: 0.82rem; line-height: 1.7; }
+
+  .quick-prompts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 540px; }
+
+  .quick-prompt {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 13px;
+    font-size: 0.76rem; cursor: pointer;
+    transition: all 0.15s; color: var(--text);
+  }
+
+  .quick-prompt:hover { border-color: var(--accent); color: var(--accent); }
+
+  .input-area {
+    padding: 13px 26px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+
+  textarea {
+    flex: 1; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 11px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    resize: none; min-height: 44px; max-height: 100px;
+    line-height: 1.5; transition: border-color 0.15s;
+  }
+
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  button.send {
+    background: var(--accent); color: #000;
+    border: none; border-radius: 9px;
+    padding: 11px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+    letter-spacing: 0.5px; white-space: nowrap; height: 44px;
+  }
+
+  button.send:hover { background: #d4eb30; }
+  button.send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* BROWSE */
+  .browse-panel { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  .browse-toolbar {
+    padding: 13px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: center;
+    flex-shrink: 0; flex-wrap: wrap;
+    background: var(--surface);
+  }
+
+  .search-wrap { flex: 1; min-width: 180px; position: relative; }
+
+  .search-wrap input {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 13px 8px 34px;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    transition: border-color 0.15s;
+  }
+
+  .search-wrap input:focus { outline: none; border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--muted); }
+
+  .search-icon {
+    position: absolute; left: 11px; top: 50%;
+    transform: translateY(-50%); color: var(--muted);
+    font-size: 0.85rem; pointer-events: none;
+  }
+
+  .browse-toolbar select {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 11px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    cursor: pointer; min-width: 120px;
+  }
+
+  .browse-toolbar select:focus { outline: none; border-color: var(--accent); }
+
+  .surprise-btn {
+    background: var(--pill-bg); border: 1px solid var(--accent2);
+    border-radius: 8px; padding: 8px 14px;
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap; font-weight: 700;
+  }
+
+  .surprise-btn:hover { background: var(--accent2); color: #000; }
+
+  .filter-row {
+    display: flex; gap: 7px; flex-wrap: wrap;
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg); flex-shrink: 0;
+    align-items: center;
+  }
+
+  .filter-row-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem; color: var(--muted);
+    margin-right: 4px; white-space: nowrap;
+  }
+
+  .filter-btn {
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 0.72rem; cursor: pointer;
+    transition: all 0.15s; color: var(--text);
+    font-family: 'DM Sans', sans-serif; user-select: none;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  .filter-btn.active { background: var(--accent3); color: #000; border-color: var(--accent3); font-weight: 500; }
+
+  .results-meta {
+    padding: 8px 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+  }
+
+  .clear-btn {
+    background: none; border: none; color: var(--accent2);
+    font-family: 'Space Mono', monospace; font-size: 0.62rem;
+    cursor: pointer; padding: 0;
+  }
+
+  .clear-btn:hover { text-decoration: underline; }
+
+  .results-grid {
+    flex: 1; overflow-y: auto;
+    padding: 16px 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px; align-content: start;
+  }
+
+  .results-grid::-webkit-scrollbar { width: 3px; }
+  .results-grid::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .result-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+    transition: border-color 0.15s, transform 0.1s;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+
+  .result-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+  .rc-cat {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .rc-title { font-weight: 600; font-size: 0.83rem; color: var(--text); line-height: 1.3; }
+  .rc-year { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+  .rc-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+
+  .rc-tag {
+    background: var(--pill-bg); border-radius: 8px;
+    padding: 2px 7px; font-size: 0.58rem;
+    color: var(--muted); font-family: 'Space Mono', monospace;
+  }
+
+  .surprise-card {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(232,255,71,0.07), rgba(255,107,53,0.05));
+    border: 1px solid var(--accent);
+    border-radius: 12px; padding: 18px 22px;
+    display: flex; align-items: center; gap: 18px;
+    animation: fadeUp 0.3s ease; margin-bottom: 4px;
+  }
+
+  .sc-emoji { font-size: 2.2rem; }
+  .sc-body { flex: 1; }
+
+  .sc-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem; color: var(--accent);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px;
+  }
+
+  .sc-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem; letter-spacing: 2px;
+    color: var(--text); line-height: 1.1;
+  }
+
+  .sc-meta { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-top: 3px; }
+
+  .sc-again {
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px;
+    color: var(--muted); font-family: 'Space Mono', monospace;
+    font-size: 0.62rem; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  }
+
+  .sc-again:hover { border-color: var(--accent); color: var(--accent); }
+
+  .no-results {
+    grid-column: 1/-1; text-align: center;
+    padding: 50px 20px; color: var(--muted); font-size: 0.84rem;
+  }
+
+  .nr-icon { font-size: 2.2rem; margin-bottom: 10px; }
+
+  .more-indicator {
+    grid-column: 1/-1; text-align: center;
+    padding: 16px 20px; color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 0.62rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>THE VAULT</h1>
+  <div class="tagline">PERSONAL MEDIA ORACLE</div>
+  <div class="header-right">
+    <div class="ai-status">
+      <div class="ai-dot checking" id="aiDot"></div>
+      <span id="aiStatusText">CHECKING AI…</span>
+    </div>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">🎬 <strong>2,738</strong> Movies</div>
+  <div class="stat">📺 <strong>316</strong> TV Shows</div>
+  <div class="stat">🎤 <strong>95</strong> Standup</div>
+  <div class="stat">🎵 <strong>52</strong> Music Docs</div>
+  <div class="stat">🎥 <strong>118</strong> Docs</div>
+  <div class="stat">📦 <strong>3,319</strong> Total</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" id="tabAI" onclick="switchTab('ai')">🤖 AI RECOMMENDATIONS</div>
+  <div class="tab" id="tabBrowse" onclick="switchTab('browse')">🔍 BROWSE &amp; SEARCH</div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>Mood / Vibe</h3>
+      <div class="mood-chips">
+        <div class="chip" onclick="toggleMood(this,'Laugh')">😂 Laugh</div>
+        <div class="chip" onclick="toggleMood(this,'Scared')">😱 Scared</div>
+        <div class="chip" onclick="toggleMood(this,'Mind-blown')">🤯 Mind-blown</div>
+        <div class="chip" onclick="toggleMood(this,'Emotional')">😢 Emotional</div>
+        <div class="chip" onclick="toggleMood(this,'Action')">🔥 Action</div>
+        <div class="chip" onclick="toggleMood(this,'Thoughtful')">🧠 Thoughtful</div>
+        <div class="chip" onclick="toggleMood(this,'Easy watch')">🍿 Easy watch</div>
+        <div class="chip" onclick="toggleMood(this,'Cool')">🕶️ Cool</div>
+        <div class="chip" onclick="toggleMood(this,'Weird')">🌀 Weird</div>
+        <div class="chip" onclick="toggleMood(this,'True story')">📖 True story</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Content Type</h3>
+      <div class="type-pills">
+        <div class="type-pill" id="tp-movies" onclick="toggleType(this,'movies')">🎬 Movies <span class="count">2,738</span></div>
+        <div class="type-pill" id="tp-tv" onclick="toggleType(this,'tv')">📺 TV Shows <span class="count">316</span></div>
+        <div class="type-pill" id="tp-standup" onclick="toggleType(this,'standup')">🎤 Standup <span class="count">95</span></div>
+        <div class="type-pill" id="tp-docs" onclick="toggleType(this,'docs')">🎥 Docs <span class="count">118</span></div>
+        <div class="type-pill" id="tp-musicdocs" onclick="toggleType(this,'musicdocs')">🎵 Music Docs <span class="count">52</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="aiQuickModes">
+      <h3>Quick Modes</h3>
+      <div class="mood-chips">
+        <div class="chip" onclick="setAIPrompt('What hidden gems am I sleeping on that most people overlook?')">💎 Hidden gems</div>
+        <div class="chip" onclick="setAIPrompt('What acclaimed titles am I missing that I should add to my library?')">➕ What to add</div>
+        <div class="chip" onclick="setAIPrompt('Give me a perfect double feature pairing from my library for tonight.')">🎞️ Double feature</div>
+        <div class="chip" onclick="setAIPrompt('Suggest a director rabbit hole I can follow using titles already in my library.')">🐇 Rabbit hole</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI PANEL -->
+  <div class="panel active" id="panelAI">
+    <div class="chat-area">
+      <div id="offlineBanner" style="display:none" class="offline-banner">
+        ⚠️ AI is unavailable right now. Use Browse &amp; Search to explore your library manually.
+        <button onclick="switchTab('browse')">GO TO BROWSE →</button>
+      </div>
+      <div class="messages" id="messages">
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon">🎬</div>
+          <h2>What Are You In The Mood For?</h2>
+          <p>Tell me a vibe, genre, or something you loved. I know your entire library and I'll find exactly what you need.</p>
+          <div class="quick-prompts">
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Something like No Country for Old Men</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best horror I might have missed</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Great standup for tonight</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">A documentary that'll change how I think</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">90s movies I should revisit</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best thing to binge this weekend</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Essential titles missing from my library</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best music documentary I have</div>
+          </div>
+        </div>
+      </div>
+      <div class="input-area">
+        <textarea id="aiInput" placeholder="Describe your mood, a genre, something you loved, or ask anything…" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send" onclick="sendAIMessage()" id="sendBtn">SEND →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BROWSE PANEL -->
+  <div class="panel" id="panelBrowse">
+    <div class="browse-panel">
+      <div class="browse-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search titles…" oninput="runSearch()" autocomplete="off">
+        </div>
+        <select id="decadeFilter" onchange="runSearch()">
+          <option value="">All Decades</option>
+          <option value="1960">1960s</option>
+          <option value="1970">1970s</option>
+          <option value="1980">1980s</option>
+          <option value="1990">1990s</option>
+          <option value="2000">2000s</option>
+          <option value="2010">2010s</option>
+          <option value="2020">2020s</option>
+        </select>
+        <button class="surprise-btn" onclick="surpriseMe()">🎲 SURPRISE ME</button>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-row-label">GENRE:</span>
+        <div class="filter-btn" onclick="toggleGenre(this,'horror')">Horror</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'comedy')">Comedy</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'action')">Action</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'scifi')">Sci-Fi</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'thriller')">Thriller</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'drama')">Drama</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'animated')">Animated</div>
+        <div class="filter-btn" onclick="toggleGenre(this,'crime')">Crime</div>
+      </div>
+
+      <div class="results-meta">
+        <span id="resultsMeta">Loading…</span>
+        <button class="clear-btn" onclick="clearAllFilters()">✕ CLEAR FILTERS</button>
+      </div>
+
+      <div class="results-grid" id="resultsGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="library.js"></script>
+<script>
+// Build flat list with genre overrides
+const ALL = [];
+Object.entries(RAW).forEach(([cat, titles]) => {
+  titles.forEach(title => {
+    const ym = title.match(/\((\d{4})\)/);
+    const year = ym ? +ym[1] : null;
+    const decade = year ? Math.floor(year/10)*10 : null;
+    const clean = title.replace(/\s*\(\d{4}\)\s*/,'').trim();
+    const lc = title.toLowerCase();
+    const tags = GENRE_OVERRIDES[title]
+      ? [...GENRE_OVERRIDES[title]]
+      : Object.entries(GENRE_KW).filter(([,kws]) => kws.some(k => lc.includes(k))).map(([g]) => g);
+    ALL.push({ title, clean, cat, year, decade, tags });
+  });
+});
+
+
+// ============================================================
+// STATE
+// ============================================================
+let activeMoods = [], activeTypes = new Set(), activeGenres = new Set();
+let aiConv = [], aiLoading = false, aiAvailable = null, surpriseItem = null;
+
+// ============================================================
+// AI STATUS
+// ============================================================
+async function checkAI() {
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:5, messages:[{role:'user',content:'hi'}] })
+    });
+    const d = await r.json();
+    aiAvailable = !d.error;
+  } catch(e) { aiAvailable = false; }
+  updateAIStatus();
+}
+
+function updateAIStatus() {
+  const dot = document.getElementById('aiDot');
+  const txt = document.getElementById('aiStatusText');
+  const banner = document.getElementById('offlineBanner');
+  if (aiAvailable) {
+    dot.className = 'ai-dot'; txt.textContent = 'AI ONLINE'; banner.style.display = 'none';
+  } else {
+    dot.className = 'ai-dot offline'; txt.textContent = 'AI OFFLINE'; banner.style.display = 'flex';
+    const tab = document.getElementById('tabBrowse');
+    if (!tab.querySelector('.tab-badge')) {
+      const b = document.createElement('span'); b.className = 'tab-badge'; b.textContent = 'USE THIS'; tab.appendChild(b);
+    }
+  }
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (tab === 'ai') {
+    document.getElementById('tabAI').classList.add('active');
+    document.getElementById('panelAI').classList.add('active');
+    document.getElementById('aiQuickModes').style.display = '';
+  } else {
+    document.getElementById('tabBrowse').classList.add('active');
+    document.getElementById('panelBrowse').classList.add('active');
+    document.getElementById('aiQuickModes').style.display = 'none';
+    runSearch();
+  }
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function toggleMood(el, mood) {
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) activeMoods.push(mood); else activeMoods = activeMoods.filter(m=>m!==mood);
+  if (document.getElementById('panelBrowse').classList.contains('active')) runSearch();
+}
+
+function toggleType(el, type) {
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) activeTypes.add(type); else activeTypes.delete(type);
+  if (document.getElementById('panelBrowse').classList.contains('active')) runSearch();
+}
+
+function toggleGenre(el, g) {
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) activeGenres.add(g); else activeGenres.delete(g);
+  runSearch();
+}
+
+function clearAllFilters() {
+  activeGenres.clear(); activeTypes.clear(); activeMoods = []; surpriseItem = null;
+  document.querySelectorAll('.filter-btn,.type-pill,.chip').forEach(e => e.classList.remove('active'));
+  document.getElementById('searchInput').value = '';
+  document.getElementById('decadeFilter').value = '';
+  runSearch();
+}
+
+// ============================================================
+// SEARCH ENGINE
+// ============================================================
+function getFiltered() {
+  const q = (document.getElementById('searchInput')?.value||'').toLowerCase().trim();
+  const dec = document.getElementById('decadeFilter')?.value;
+  const moodGenres = new Set(); activeMoods.forEach(m => (MOOD_GENRE[m]||[]).forEach(g=>moodGenres.add(g)));
+  const allGenres = new Set([...activeGenres,...moodGenres]);
+  return ALL.filter(item => {
+    if (activeTypes.size && !activeTypes.has(item.cat)) return false;
+    if (dec && item.decade !== +dec) return false;
+    if (allGenres.size && !item.tags.some(t=>allGenres.has(t))) return false;
+    if (q && !item.title.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function runSearch() { surpriseItem = null; renderResults(getFiltered()); }
+
+function surpriseMe() {
+  surpriseItem = null;
+  const pool = getFiltered();
+  if (!pool.length) { runSearch(); return; }
+  surpriseItem = pool[Math.floor(Math.random()*pool.length)];
+  renderResults(pool);
+}
+
+function renderResults(results) {
+  const grid = document.getElementById('resultsGrid');
+  const meta = document.getElementById('resultsMeta');
+  const hasF = activeTypes.size||activeGenres.size||activeMoods.length||(document.getElementById('searchInput')?.value||'').trim()||(document.getElementById('decadeFilter')?.value);
+  meta.textContent = hasF ? `${results.length.toLocaleString()} result${results.length!==1?'s':''} found` : `All ${ALL.length.toLocaleString()} titles`;
+  grid.innerHTML = '';
+
+  if (surpriseItem) {
+    const sc = document.createElement('div'); sc.className = 'surprise-card';
+    sc.innerHTML = `<div class="sc-emoji">${CAT[surpriseItem.cat].icon}</div>
+      <div class="sc-body"><div class="sc-label">🎲 Tonight's Pick</div>
+      <div class="sc-title">${x(surpriseItem.clean)}</div>
+      <div class="sc-meta">${CAT[surpriseItem.cat].label}${surpriseItem.year?' · '+surpriseItem.year:''}${surpriseItem.tags.length?' · '+surpriseItem.tags.slice(0,3).join(', '):''}</div></div>
+      <button class="sc-again" onclick="surpriseMe()">🎲 AGAIN</button>`;
+    grid.appendChild(sc);
+  }
+
+  if (!results.length) {
+    const e = document.createElement('div'); e.className = 'no-results';
+    e.innerHTML = '<div class="nr-icon">🔍</div><div>No results match.<br>Try clearing some filters.</div>';
+    grid.appendChild(e); return;
+  }
+
+  results.slice(0,250).forEach(item => {
+    const c = document.createElement('div'); c.className = 'result-card';
+    const tagsHtml = item.tags.slice(0,3).map(t=>`<span class="rc-tag">${t}</span>`).join('');
+    c.innerHTML = `<div class="rc-cat">${CAT[item.cat].icon} ${CAT[item.cat].label}</div>
+      <div class="rc-title">${x(item.clean)}</div>
+      ${item.year?`<div class="rc-year">${item.year}</div>`:''}
+      ${tagsHtml?`<div class="rc-tags">${tagsHtml}</div>`:''}`;
+    grid.appendChild(c);
+  });
+
+  if (results.length > 250) {
+    const m = document.createElement('div'); m.className = 'more-indicator';
+    m.textContent = `+ ${(results.length-250).toLocaleString()} more — refine your search to narrow down`;
+    grid.appendChild(m);
+  }
+}
+
+function x(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ============================================================
+// AI CHAT
+// ============================================================
+const SYS = `You are a personal media recommendation assistant. You have the user's complete media server library.
+
+LIBRARY (3,319 titles across all categories):
+MOVIES: 2001 A Space Odyssey, 28 Days Later, 300, Alien/Aliens, Almost Famous, American Beauty, American History X, American Psycho, Arrival, Back To The Future (trilogy), Bad Boys (series), Batman Begins/Dark Knight, Big Lebowski, Blade Runner/2049, Blazing Saddles, Braveheart, Breakfast Club, Casino, Chinatown, Dark Knight trilogy, Django Unchained, Donnie Darko, Drive, Dune (both), Evil Dead (series), Exorcist, Fargo, Fight Club, Full Metal Jacket, Get Out, Ghostbusters, Gladiator, Goodfellas, Goonies, Hereditary, Her, Inception, Indiana Jones (series), Inglourious Basterds, Interstellar, It/It Chapter Two, John Wick (series), Kill Bill (series), LOTR (trilogy), Mad Max (series), Matrix (trilogy), Memento, Midsommar, No Country For Old Men, Office Space, Oldboy, Once Upon A Time In Hollywood, Oppenheimer, Pan's Labyrinth, Parasite, Prisoners, Pulp Fiction, Rocky (series), Rosemary's Baby, Saving Private Ryan, Se7en, Scream (series), Shaun of the Dead, Shining, Silence of the Lambs, Snatch, Spider-Man (multiple series), Star Wars (series), Star Trek (series), Starship Troopers, Superbad, Terminator (series), Texas Chainsaw (series), The Thing, Thor (series), Tombstone, Total Recall, Trainspotting, Truman Show, Us, Usual Suspects, Witch, Wolf of Wall Street, X-Men (series), Zodiac, Zombieland, + ~2,400 more.
+
+TV: Better Call Saul, Breaking Bad, The Boys, Chernobyl, Dark Winds, Fallout, Fargo, Firefly, Fleabag, Fringe, Game of Thrones, Hannibal, Invincible, Justified, Last of Us, Lost, Lovecraft Country, Mr Robot, Only Murders in the Building, Ozark, Peaky Blinders, Rick and Morty, Severance, Shogun, Silo, Sopranos, Ted Lasso, Terror, True Detective, Wire, Westworld, X-Files, Yellowjackets, + 270 more.
+
+DOCS: 13th, Act of Killing, Baraka, Citizenfour, Enron, Exit Through The Gift Shop, Fog of War, HyperNormalisation, I Am Not Your Negro, Inside Job, King of Kong, Last Dance, Navalny, OJ Simpson Made In America, Paradise Lost (series), Paris Is Burning, Particle Fever, Samsara, West of Memphis, + 70 more.
+
+STANDUP: Dave Chappelle (all specials), George Carlin (multiple), Richard Pryor (multiple), Bo Burnham (all), John Mulaney (all), Norm Macdonald (multiple), Bill Burr (multiple), Eddie Izzard (multiple), Patrice ONeal, Jerrod Carmichael Rothaniel, + 70 more.
+
+MUSIC DOCS: Woodstock, Gimme Shelter, Grateful Dead, Lemmy, Metallica Some Kind of Monster, Long Strange Trip, Beastie Boys Story, Miles Davis Birth of the Cool, Joy Division, One More Time With Feeling, Becoming Led Zeppelin, + ~10 more.
+
+Give specific recommendations from their library. Mention hidden gems. Suggest additions clearly marked. Be like a knowledgeable cinephile friend — direct, opinionated, enthusiastic. Use **Title (Year)** formatting, ## for sections, - for bullets.`;
+
+function setAIPrompt(t) { document.getElementById('aiInput').value=t; autoResize(document.getElementById('aiInput')); document.getElementById('aiInput').focus(); }
+function sendQuickPrompt(el) { setAIPrompt(el.textContent.trim()); sendAIMessage(); }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAIMessage();} }
+
+function addMsg(cls, html) {
+  const msgs = document.getElementById('messages');
+  const w = document.getElementById('welcome'); if(w) w.remove();
+  const d = document.createElement('div'); d.className = 'msg '+cls;
+  d.innerHTML = html; msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+}
+
+function fmt(t) {
+  t = t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  t = t.replace(/^##\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^#\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^-\s+(.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>');
+  t = t.replace(/<\/ul>\s*<ul>/g,'');
+  return t.split(/\n\n+/).map(p => {
+    p=p.trim(); if(!p) return '';
+    if(/^<(h3|ul|li)/.test(p)) return p;
+    return `<p>${p.replace(/\n/g,'<br>')}</p>`;
+  }).join('');
+}
+
+async function sendAIMessage() {
+  if(aiLoading) return;
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim(); if(!text) return;
+  input.value=''; input.style.height='auto';
+  aiLoading=true; document.getElementById('sendBtn').disabled=true;
+  let ctx='';
+  if(activeMoods.length) ctx+=` [Mood: ${activeMoods.join(', ')}]`;
+  if(activeTypes.size) ctx+=` [Types: ${[...activeTypes].join(', ')}]`;
+  addMsg('user',`<div class="msg-bubble">${x(text)}</div>`);
+  addMsg('assistant','<div class="thinking" id="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
+  aiConv.push({role:'user',content:text+ctx});
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYS,messages:aiConv})
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    const reply = d.content?.[0]?.text||'No response.';
+    aiConv.push({role:'assistant',content:reply});
+    document.getElementById('thinking').outerHTML=`<div class="msg assistant"><div class="msg-bubble">${fmt(reply)}</div></div>`;
+    aiAvailable=true; updateAIStatus();
+  } catch(err) {
+    document.getElementById('thinking').outerHTML=`<div class="msg assistant"><div class="msg-bubble"><p>⚠️ AI unavailable. <a href="#" onclick="switchTab('browse');return false;" style="color:var(--accent)">Switch to Browse &amp; Search →</a></p></div></div>`;
+    aiAvailable=false; updateAIStatus();
+  }
+  aiLoading=false; document.getElementById('sendBtn').disabled=false;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+checkAI();
+runSearch();
+</script>
+</body>
+</html>
