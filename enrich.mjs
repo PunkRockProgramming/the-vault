@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // One-time metadata enrichment — fetches genres, descriptions, and poster paths from TMDB.
-// Usage: TMDB_API_KEY=xxx node enrich.mjs
+// Usage: node enrich.mjs  (reads TMDB_API_KEY from .env)
 // Outputs: metadata.js (committed and loaded by the browser app)
 // Re-run safely — skips titles already in metadata.js. To retry failures, delete their keys.
 
@@ -11,8 +11,21 @@ import vm from 'vm';
 import https from 'https';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load .env
+const envPath = join(__dirname, '.env');
+if (existsSync(envPath)) {
+  readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const [k, ...rest] = line.split('=');
+    if (k?.trim() && rest.length) process.env[k.trim()] = rest.join('=').trim();
+  });
+}
+
 const TMDB_KEY = process.env.TMDB_API_KEY;
-if (!TMDB_KEY) { console.error('TMDB_API_KEY env var not set'); process.exit(1); }
+if (!TMDB_KEY || TMDB_KEY === 'your_tmdb_api_key_here') {
+  console.error('Add your TMDB_API_KEY to the-vault/.env');
+  process.exit(1);
+}
 
 const OUT = join(__dirname, 'metadata.js');
 const CHECKPOINT = 100; // write to disk every N titles
