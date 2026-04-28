@@ -407,6 +407,8 @@ function renderResults(results) {
     m.textContent = `+ ${(results.length - 250).toLocaleString()} more — refine your search to narrow down`;
     grid.appendChild(m);
   }
+
+  syncURL();
 }
 
 function x(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -668,6 +670,67 @@ function newConversation() {
 }
 
 // ============================================================
+// URL PERSISTENCE
+// ============================================================
+function syncURL() {
+  const params = new URLSearchParams();
+  if (activeGenres.size) params.set('genre', [...activeGenres].join(','));
+  if (activeTypes.size) params.set('type', [...activeTypes].join(','));
+  if (activeMoods.length) params.set('mood', activeMoods.join(','));
+  const dec = document.getElementById('decadeFilter')?.value;
+  if (dec) params.set('decade', dec);
+  const q = (document.getElementById('searchInput')?.value || '').trim();
+  if (q) params.set('q', q);
+  if (statusFilter !== 'all') params.set('status', statusFilter);
+  if (sortMode !== 'default') params.set('sort', sortMode);
+  if (viewMode !== 'grid') params.set('view', viewMode);
+  const str = params.toString();
+  history.replaceState(null, '', str ? '?' + str : location.pathname);
+}
+
+function restoreFromURL() {
+  const params = new URLSearchParams(location.search);
+  if (!params.size) return;
+
+  if (params.has('genre')) params.get('genre').split(',').forEach(g => activeGenres.add(g));
+  if (params.has('type')) params.get('type').split(',').forEach(t => {
+    activeTypes.add(t);
+    document.getElementById(`tp-${t}`)?.classList.add('active');
+  });
+  if (params.has('mood')) params.get('mood').split(',').forEach(m => {
+    activeMoods.push(m);
+    document.querySelectorAll('.chip').forEach(el => {
+      if (el.textContent.trim().includes(m)) el.classList.add('active');
+    });
+  });
+  if (params.has('decade')) {
+    const el = document.getElementById('decadeFilter');
+    if (el) el.value = params.get('decade');
+  }
+  if (params.has('q')) {
+    const el = document.getElementById('searchInput');
+    if (el) el.value = params.get('q');
+  }
+  if (params.has('status')) {
+    statusFilter = params.get('status');
+    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+    const map = { all:'sfAll', unwatched:'sfUnwatched', want:'sfWant', watched:'sfWatched' };
+    document.getElementById(map[statusFilter])?.classList.add('active');
+  }
+  if (params.has('sort')) {
+    sortMode = params.get('sort');
+    const el = document.getElementById('sortSelect');
+    if (el) el.value = sortMode;
+  }
+  if (params.has('view') && params.get('view') === 'list') {
+    viewMode = 'list';
+    document.getElementById('resultsGrid')?.classList.add('list-view');
+    const btn = document.getElementById('viewToggleBtn');
+    if (btn) btn.textContent = '⊞ GRID';
+  }
+}
+
+// ============================================================
 // KEYBOARD SHORTCUTS
 // ============================================================
 document.addEventListener('keydown', e => {
@@ -695,7 +758,8 @@ document.addEventListener('keydown', e => {
 // INIT
 // ============================================================
 loadPersisted();
-buildGenreFilters();
+restoreFromURL();    // populate state before building genre buttons
+buildGenreFilters(); // reads activeGenres to apply .active on restored genres
 if (AI_ENABLED) {
   restoreAIConversation();
   checkAI();
@@ -704,4 +768,5 @@ if (AI_ENABLED) {
   document.getElementById('aiQuickModes').style.display = 'none';
   switchTab('browse');
 }
+if (location.search) switchTab('browse'); // URL params always land on Browse
 runSearch();
