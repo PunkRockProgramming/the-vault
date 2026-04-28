@@ -265,7 +265,8 @@ function getFiltered() {
 
   let results = ALL.filter(item => {
     if (activeTypes.size && !activeTypes.has(item.cat)) return false;
-    if (dec && item.decade !== +dec) return false;
+    if (dec === 'pre1960') { if (!item.year || item.year >= 1960) return false; }
+    else if (dec && item.decade !== +dec) return false;
     if (allGenres.size && !item.tags.some(t => allGenres.has(t))) return false;
     if (q && !item.title.toLowerCase().includes(q)) return false;
     const st = STATUS[item.title] || null;
@@ -286,6 +287,21 @@ function getFiltered() {
   return results;
 }
 
+function buildFilterSummary() {
+  const parts = [];
+  const statusLabels = { unwatched: 'Unwatched', want: 'Watchlist', watched: 'Watched' };
+  if (statusFilter !== 'all') parts.push(statusLabels[statusFilter]);
+  activeTypes.forEach(t => parts.push(CAT[t].label));
+  activeGenres.forEach(g => parts.push(g.charAt(0).toUpperCase() + g.slice(1)));
+  activeMoods.forEach(m => parts.push(m));
+  const dec = document.getElementById('decadeFilter')?.value;
+  if (dec === 'pre1960') parts.push('Classic (pre-1960)');
+  else if (dec) parts.push(dec + 's');
+  const q = (document.getElementById('searchInput')?.value || '').trim();
+  if (q) parts.push(`"${q}"`);
+  return parts;
+}
+
 function runSearch() { surpriseItem = null; renderResults(getFiltered()); }
 
 function surpriseMe() {
@@ -299,13 +315,11 @@ function surpriseMe() {
 function renderResults(results) {
   const grid = document.getElementById('resultsGrid');
   const meta = document.getElementById('resultsMeta');
-  const hasF = activeTypes.size || activeGenres.size || activeMoods.length ||
-    (document.getElementById('searchInput')?.value || '').trim() ||
-    (document.getElementById('decadeFilter')?.value) ||
-    statusFilter !== 'all';
-  meta.textContent = hasF
-    ? `${results.length.toLocaleString()} result${results.length !== 1 ? 's' : ''} found`
+  const filterParts = buildFilterSummary();
+  const countText = filterParts.length
+    ? `${results.length.toLocaleString()} result${results.length !== 1 ? 's' : ''}`
     : `All ${ALL.length.toLocaleString()} titles`;
+  meta.textContent = filterParts.length ? `${countText} · ${filterParts.join(' · ')}` : countText;
   grid.innerHTML = '';
 
   if (surpriseItem) {
@@ -320,7 +334,9 @@ function renderResults(results) {
 
   if (!results.length) {
     const e = document.createElement('div'); e.className = 'no-results';
-    e.innerHTML = '<div class="nr-icon">🔍</div><div>No results match.<br>Try clearing some filters.</div>';
+    const filterParts = buildFilterSummary();
+    const hint = filterParts.length > 1 ? 'Try removing one of the filters.' : 'Try a different search.';
+    e.innerHTML = `<div class="nr-icon">🔍</div><div>Nothing matches${filterParts.length ? ' <em>' + filterParts.join(' + ') + '</em>' : ''}.<br>${hint}</div>`;
     grid.appendChild(e); return;
   }
 
