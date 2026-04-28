@@ -41,10 +41,11 @@ const TMDB_GENRES = {
   10766:'drama', 10768:'war',
 };
 
-// Load library data via vm sandbox (library.js is a browser global script, not a module)
+// Load library data via vm sandbox (library.js is a browser global script, not a module).
+// Replace top-level `const` with `var` so declarations attach to the sandbox global.
 const sandbox = {};
 vm.createContext(sandbox);
-vm.runInContext(readFileSync(join(__dirname, 'library.js'), 'utf8'), sandbox);
+vm.runInContext(readFileSync(join(__dirname, 'library.js'), 'utf8').replace(/^const /gm, 'var '), sandbox);
 const { RAW } = sandbox;
 
 // Resume: load existing metadata.js if present
@@ -53,7 +54,7 @@ if (existsSync(OUT)) {
   try {
     const ctx = {};
     vm.createContext(ctx);
-    vm.runInContext(readFileSync(OUT, 'utf8'), ctx);
+    vm.runInContext(readFileSync(OUT, 'utf8').replace(/^const /gm, 'var '), ctx);
     metadata = ctx.METADATA || {};
     console.log(`Resuming — ${Object.keys(metadata).length} titles already processed\n`);
   } catch(e) {
