@@ -261,13 +261,13 @@ function getFiltered() {
   const dec = document.getElementById('decadeFilter')?.value;
   const moodGenres = new Set();
   activeMoods.forEach(m => (MOOD_GENRE[m] || []).forEach(g => moodGenres.add(g)));
-  const allGenres = new Set([...activeGenres, ...moodGenres]);
 
   let results = ALL.filter(item => {
     if (activeTypes.size && !activeTypes.has(item.cat)) return false;
     if (dec === 'pre1960') { if (!item.year || item.year >= 1960) return false; }
     else if (dec && item.decade !== +dec) return false;
-    if (allGenres.size && !item.tags.some(t => allGenres.has(t))) return false;
+    if (moodGenres.size && !item.tags.some(t => moodGenres.has(t))) return false;
+    if (activeGenres.size && ![...activeGenres].every(g => item.tags.includes(g))) return false;
     if (q && !item.title.toLowerCase().includes(q)) return false;
     const st = STATUS[item.title] || null;
     if (statusFilter === 'unwatched' && st) return false;
