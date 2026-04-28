@@ -7,9 +7,11 @@ Object.entries(RAW).forEach(([cat, titles]) => {
     const decade = year ? Math.floor(year/10)*10 : null;
     const clean = title.replace(/\s*\(\d{4}\)\s*/,'').trim();
     const lc = title.toLowerCase();
-    const tags = GENRE_OVERRIDES[title]
-      ? [...GENRE_OVERRIDES[title]]
-      : Object.entries(GENRE_KW).filter(([,kws]) => kws.some(k => lc.includes(k))).map(([g]) => g);
+    const tags = (METADATA[title]?.genres?.length)
+      ? [...METADATA[title].genres]
+      : GENRE_OVERRIDES[title]
+        ? [...GENRE_OVERRIDES[title]]
+        : Object.entries(GENRE_KW).filter(([,kws]) => kws.some(k => lc.includes(k))).map(([g]) => g);
     ALL.push({ title, clean, cat, year, decade, tags });
   });
 });
@@ -374,8 +376,13 @@ function renderResults(results) {
       ${rating ? `<span class="rc-stars">${'★'.repeat(rating)}</span>` : ''}
       ${hasNote ? `<span class="rc-has-note">📝</span>` : ''}
     </div>` : '';
+    const posterPath = METADATA[item.title]?.poster;
+    const posterHtml = posterPath
+      ? `<div class="rc-poster"><img src="https://image.tmdb.org/t/p/w300${posterPath}" loading="lazy" alt="" onerror="this.parentNode.style.display='none'"></div>`
+      : '';
 
     c.innerHTML = `
+      ${posterHtml}
       <div class="rc-cat">${CAT[item.cat].icon} ${CAT[item.cat].label}</div>
       <div class="rc-title">${x(item.clean)}</div>
       ${item.year ? `<div class="rc-year">${item.year}</div>` : ''}
@@ -439,6 +446,17 @@ function openModal(item) {
   const existing = META[item.title] || {};
   pendingRating = existing.rating || 0;
 
+  const tmdb = METADATA[item.title] || {};
+  const mPoster = document.getElementById('mPoster');
+  if (mPoster) {
+    if (tmdb.poster) {
+      mPoster.src = `https://image.tmdb.org/t/p/w342${tmdb.poster}`;
+      mPoster.style.display = '';
+    } else {
+      mPoster.style.display = 'none';
+    }
+  }
+
   document.getElementById('mCat').innerHTML = `${CAT[item.cat].icon} ${CAT[item.cat].label}`;
   document.getElementById('mTitle').textContent = item.clean;
   document.getElementById('mMeta').innerHTML = [
@@ -448,6 +466,12 @@ function openModal(item) {
   document.getElementById('mTags').innerHTML = item.tags
     .map(t => `<span class="rc-tag" style="font-size:0.7rem;padding:3px 9px">${t}</span>`)
     .join('');
+
+  const descEl = document.getElementById('mDescription');
+  if (descEl) {
+    descEl.textContent = tmdb.description || '';
+    descEl.style.display = tmdb.description ? '' : 'none';
+  }
 
   updateModalStatusButtons();
   renderModalStars(pendingRating);
