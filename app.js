@@ -14,12 +14,50 @@ Object.entries(RAW).forEach(([cat, titles]) => {
   });
 });
 
-
 // ============================================================
 // STATE
 // ============================================================
 let activeMoods = [], activeTypes = new Set(), activeGenres = new Set();
 let aiConv = [], aiLoading = false, aiAvailable = null, surpriseItem = null;
+let viewMode = 'grid'; // 'grid' | 'list'
+let sortMode = 'default';
+let statusFilter = 'all'; // 'all' | 'unwatched' | 'want' | 'watched'
+let STATUS = {}, META = {};
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+function loadPersisted() {
+  try { STATUS = JSON.parse(localStorage.getItem('vault_status') || '{}'); } catch(e) { STATUS = {}; }
+  try { META = JSON.parse(localStorage.getItem('vault_meta') || '{}'); } catch(e) { META = {}; }
+  try {
+    const saved = JSON.parse(localStorage.getItem('vault_ai_conv') || '[]');
+    aiConv = Array.isArray(saved) ? saved : [];
+  } catch(e) { aiConv = []; }
+  updateStatBar();
+}
+
+function saveStatus() {
+  localStorage.setItem('vault_status', JSON.stringify(STATUS));
+  updateStatBar();
+}
+
+function saveMeta() { localStorage.setItem('vault_meta', JSON.stringify(META)); }
+
+function saveAIConv() {
+  localStorage.setItem('vault_ai_conv', JSON.stringify(aiConv.slice(-40)));
+}
+
+function getWatchlistCount() { return Object.values(STATUS).filter(v => v === 'want').length; }
+function getWatchedCount() { return Object.values(STATUS).filter(v => v === 'watched').length; }
+
+function updateStatBar() {
+  const wl = getWatchlistCount(), wd = getWatchedCount();
+  const wlStat = document.getElementById('statWatchlist');
+  const wdStat = document.getElementById('statWatched');
+  if (wlStat) { wlStat.style.display = wl ? '' : 'none'; document.getElementById('wlCount').textContent = wl; }
+  if (wdStat) { wdStat.style.display = wd ? '' : 'none'; document.getElementById('wdCount').textContent = wd; }
+}
 
 // ============================================================
 // AI STATUS
@@ -72,15 +110,23 @@ function switchTab(tab) {
 // ============================================================
 // SIDEBAR
 // ============================================================
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+}
+
 function toggleMood(el, mood) {
   el.classList.toggle('active');
-  if (el.classList.contains('active')) activeMoods.push(mood); else activeMoods = activeMoods.filter(m=>m!==mood);
+  if (el.classList.contains('active')) activeMoods.push(mood);
+  else activeMoods = activeMoods.filter(m => m !== mood);
+  if (window.innerWidth <= 700) document.querySelector('.sidebar').classList.remove('open');
   if (document.getElementById('panelBrowse').classList.contains('active')) runSearch();
 }
 
 function toggleType(el, type) {
   el.classList.toggle('active');
-  if (el.classList.contains('active')) activeTypes.add(type); else activeTypes.delete(type);
+  if (el.classList.contains('active')) activeTypes.add(type);
+  else activeTypes.delete(type);
+  if (window.innerWidth <= 700) document.querySelector('.sidebar').classList.remove('open');
   if (document.getElementById('panelBrowse').classList.contains('active')) runSearch();
 }
 
@@ -93,26 +139,111 @@ function toggleGenre(el, g) {
 function clearAllFilters() {
   activeGenres.clear(); activeTypes.clear(); activeMoods = []; surpriseItem = null;
   document.querySelectorAll('.filter-btn,.type-pill,.chip').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sfAll').classList.add('active');
+  statusFilter = 'all';
   document.getElementById('searchInput').value = '';
   document.getElementById('decadeFilter').value = '';
   runSearch();
 }
 
 // ============================================================
+// BROWSE CONTROLS
+// ============================================================
+function setStatusFilter(filter) {
+  statusFilter = filter;
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+  const map = { all:'sfAll', unwatched:'sfUnwatched', want:'sfWant', watched:'sfWatched' };
+  const btn = document.getElementById(map[filter]);
+  if (btn) btn.classList.add('active');
+  surpriseItem = null;
+  runSearch();
+}
+
+function toggleView() {
+  viewMode = viewMode === 'grid' ? 'list' : 'grid';
+  const btn = document.getElementById('viewToggleBtn');
+  const grid = document.getElementById('resultsGrid');
+  if (viewMode === 'list') {
+    grid.classList.add('list-view');
+    btn.textContent = '⊞ GRID';
+  } else {
+    grid.classList.remove('list-view');
+    btn.textContent = '☰ LIST';
+  }
+}
+
+function setSortMode(mode) { sortMode = mode; runSearch(); }
+
+function quickStatus(title, status) {
+  if (STATUS[title] === status) delete STATUS[title];
+  else STATUS[title] = status;
+  saveStatus();
+  runSearch();
+}
+
+function surpriseMeWatchlist() {
+  surpriseItem = null;
+  const pool = ALL.filter(item => STATUS[item.title] === 'want');
+  if (!pool.length) {
+    const btn = document.getElementById('sfWant');
+    if (btn) { btn.style.background = 'var(--accent2)'; setTimeout(() => btn.style.background = '', 600); }
+    return;
+  }
+  surpriseItem = pool[Math.floor(Math.random() * pool.length)];
+  setStatusFilter('want');
+}
+
+function exportWatchlist() {
+  const items = ALL.filter(item => STATUS[item.title] === 'want');
+  if (!items.length) {
+    const btn = document.getElementById('sfWant');
+    if (btn) { btn.style.background = 'var(--accent2)'; setTimeout(() => btn.style.background = '', 700); }
+    return;
+  }
+  const csv = 'Title,Year,Category,Genres\n' + items.map(item =>
+    `"${item.clean.replace(/"/g,'""')}","${item.year || ''}","${CAT[item.cat].label}","${item.tags.join('/')}"`
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vault-watchlist-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
 // SEARCH ENGINE
 // ============================================================
 function getFiltered() {
-  const q = (document.getElementById('searchInput')?.value||'').toLowerCase().trim();
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
   const dec = document.getElementById('decadeFilter')?.value;
-  const moodGenres = new Set(); activeMoods.forEach(m => (MOOD_GENRE[m]||[]).forEach(g=>moodGenres.add(g)));
-  const allGenres = new Set([...activeGenres,...moodGenres]);
-  return ALL.filter(item => {
+  const moodGenres = new Set();
+  activeMoods.forEach(m => (MOOD_GENRE[m] || []).forEach(g => moodGenres.add(g)));
+  const allGenres = new Set([...activeGenres, ...moodGenres]);
+
+  let results = ALL.filter(item => {
     if (activeTypes.size && !activeTypes.has(item.cat)) return false;
     if (dec && item.decade !== +dec) return false;
-    if (allGenres.size && !item.tags.some(t=>allGenres.has(t))) return false;
+    if (allGenres.size && !item.tags.some(t => allGenres.has(t))) return false;
     if (q && !item.title.toLowerCase().includes(q)) return false;
+    const st = STATUS[item.title] || null;
+    if (statusFilter === 'unwatched' && st) return false;
+    if (statusFilter === 'want' && st !== 'want') return false;
+    if (statusFilter === 'watched' && st !== 'watched') return false;
     return true;
   });
+
+  if (sortMode === 'year-desc') results.sort((a, b) => (b.year || 0) - (a.year || 0));
+  else if (sortMode === 'year-asc') results.sort((a, b) => (a.year || 9999) - (b.year || 9999));
+  else if (sortMode === 'az') results.sort((a, b) => a.clean.localeCompare(b.clean));
+  else if (sortMode === 'za') results.sort((a, b) => b.clean.localeCompare(a.clean));
+  else if (sortMode === 'watchlist') {
+    results.sort((a, b) => (STATUS[b.title] === 'want' ? 1 : 0) - (STATUS[a.title] === 'want' ? 1 : 0));
+  }
+
+  return results;
 }
 
 function runSearch() { surpriseItem = null; renderResults(getFiltered()); }
@@ -121,15 +252,20 @@ function surpriseMe() {
   surpriseItem = null;
   const pool = getFiltered();
   if (!pool.length) { runSearch(); return; }
-  surpriseItem = pool[Math.floor(Math.random()*pool.length)];
+  surpriseItem = pool[Math.floor(Math.random() * pool.length)];
   renderResults(pool);
 }
 
 function renderResults(results) {
   const grid = document.getElementById('resultsGrid');
   const meta = document.getElementById('resultsMeta');
-  const hasF = activeTypes.size||activeGenres.size||activeMoods.length||(document.getElementById('searchInput')?.value||'').trim()||(document.getElementById('decadeFilter')?.value);
-  meta.textContent = hasF ? `${results.length.toLocaleString()} result${results.length!==1?'s':''} found` : `All ${ALL.length.toLocaleString()} titles`;
+  const hasF = activeTypes.size || activeGenres.size || activeMoods.length ||
+    (document.getElementById('searchInput')?.value || '').trim() ||
+    (document.getElementById('decadeFilter')?.value) ||
+    statusFilter !== 'all';
+  meta.textContent = hasF
+    ? `${results.length.toLocaleString()} result${results.length !== 1 ? 's' : ''} found`
+    : `All ${ALL.length.toLocaleString()} titles`;
   grid.innerHTML = '';
 
   if (surpriseItem) {
@@ -137,7 +273,7 @@ function renderResults(results) {
     sc.innerHTML = `<div class="sc-emoji">${CAT[surpriseItem.cat].icon}</div>
       <div class="sc-body"><div class="sc-label">🎲 Tonight's Pick</div>
       <div class="sc-title">${x(surpriseItem.clean)}</div>
-      <div class="sc-meta">${CAT[surpriseItem.cat].label}${surpriseItem.year?' · '+surpriseItem.year:''}${surpriseItem.tags.length?' · '+surpriseItem.tags.slice(0,3).join(', '):''}</div></div>
+      <div class="sc-meta">${CAT[surpriseItem.cat].label}${surpriseItem.year ? ' · ' + surpriseItem.year : ''}${surpriseItem.tags.length ? ' · ' + surpriseItem.tags.slice(0,3).join(', ') : ''}</div></div>
       <button class="sc-again" onclick="surpriseMe()">🎲 AGAIN</button>`;
     grid.appendChild(sc);
   }
@@ -148,24 +284,174 @@ function renderResults(results) {
     grid.appendChild(e); return;
   }
 
-  results.slice(0,250).forEach(item => {
-    const c = document.createElement('div'); c.className = 'result-card';
-    const tagsHtml = item.tags.slice(0,3).map(t=>`<span class="rc-tag">${t}</span>`).join('');
-    c.innerHTML = `<div class="rc-cat">${CAT[item.cat].icon} ${CAT[item.cat].label}</div>
+  results.slice(0, 250).forEach(item => {
+    const st = STATUS[item.title] || null;
+    const rating = META[item.title]?.rating;
+    const c = document.createElement('div');
+    c.className = 'result-card' +
+      (st === 'watched' ? ' is-watched' : '') +
+      (st === 'want' ? ' is-want' : '');
+
+    const tagsHtml = item.tags.slice(0, 3).map(t => `<span class="rc-tag">${t}</span>`).join('');
+    const ratingHtml = rating ? `<div class="rc-rating">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>` : '';
+
+    c.innerHTML = `
+      <div class="rc-cat">${CAT[item.cat].icon} ${CAT[item.cat].label}</div>
       <div class="rc-title">${x(item.clean)}</div>
-      ${item.year?`<div class="rc-year">${item.year}</div>`:''}
-      ${tagsHtml?`<div class="rc-tags">${tagsHtml}</div>`:''}`;
+      ${item.year ? `<div class="rc-year">${item.year}</div>` : ''}
+      ${tagsHtml ? `<div class="rc-tags">${tagsHtml}</div>` : ''}
+      ${ratingHtml}
+      <div class="rc-actions"></div>`;
+
+    const actions = c.querySelector('.rc-actions');
+
+    const wantBtn = document.createElement('div');
+    wantBtn.className = 'rc-action' + (st === 'want' ? ' status-want' : '');
+    wantBtn.textContent = st === 'want' ? '★ Listed' : '★ List';
+    wantBtn.addEventListener('click', e => { e.stopPropagation(); quickStatus(item.title, 'want'); });
+    actions.appendChild(wantBtn);
+
+    const seenBtn = document.createElement('div');
+    seenBtn.className = 'rc-action' + (st === 'watched' ? ' status-watched' : '');
+    seenBtn.textContent = st === 'watched' ? '✓ Seen' : '✓ Seen';
+    seenBtn.addEventListener('click', e => { e.stopPropagation(); quickStatus(item.title, 'watched'); });
+    actions.appendChild(seenBtn);
+
+    c.style.cursor = 'pointer';
+    c.addEventListener('click', () => openModal(item));
     grid.appendChild(c);
   });
 
   if (results.length > 250) {
     const m = document.createElement('div'); m.className = 'more-indicator';
-    m.textContent = `+ ${(results.length-250).toLocaleString()} more — refine your search to narrow down`;
+    m.textContent = `+ ${(results.length - 250).toLocaleString()} more — refine your search to narrow down`;
     grid.appendChild(m);
   }
 }
 
 function x(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ============================================================
+// DETAIL MODAL
+// ============================================================
+let currentModalItem = null, pendingRating = 0;
+
+function getSimilar(item, n) {
+  return ALL
+    .filter(i => i.title !== item.title)
+    .map(i => {
+      let score = 0;
+      item.tags.forEach(t => { if (i.tags.includes(t)) score += 2; });
+      if (i.cat === item.cat) score += 1;
+      if (item.decade && i.decade && Math.abs(i.decade - item.decade) <= 10) score += 1;
+      return { i, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n)
+    .map(({ i }) => i);
+}
+
+function openModal(item) {
+  currentModalItem = item;
+  const existing = META[item.title] || {};
+  pendingRating = existing.rating || 0;
+
+  document.getElementById('mCat').innerHTML = `${CAT[item.cat].icon} ${CAT[item.cat].label}`;
+  document.getElementById('mTitle').textContent = item.clean;
+  document.getElementById('mMeta').innerHTML = [
+    item.year ? String(item.year) : '',
+    item.decade ? `${item.decade}s` : ''
+  ].filter(Boolean).join(' · ');
+  document.getElementById('mTags').innerHTML = item.tags
+    .map(t => `<span class="rc-tag" style="font-size:0.7rem;padding:3px 9px">${t}</span>`)
+    .join('');
+
+  updateModalStatusButtons();
+  renderModalStars(pendingRating);
+  document.getElementById('mNote').value = existing.note || '';
+  document.getElementById('mSaved').style.display = 'none';
+
+  const similar = getSimilar(item, 10);
+  const simEl = document.getElementById('mSimilar');
+  simEl.innerHTML = '';
+  if (similar.length) {
+    similar.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'similar-item';
+      el.innerHTML = `<span class="similar-item-icon">${CAT[s.cat].icon}</span>
+        <span class="similar-item-title">${x(s.clean)}</span>
+        <span class="similar-item-meta">${s.year || ''} · ${s.tags.slice(0,2).join(', ')}</span>`;
+      el.addEventListener('click', () => openModal(s));
+      simEl.appendChild(el);
+    });
+  } else {
+    simEl.innerHTML = '<div style="color:var(--muted);font-size:0.8rem">No close matches found.</div>';
+  }
+
+  document.getElementById('detailModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('detailModal').style.display = 'none';
+  document.body.style.overflow = '';
+  currentModalItem = null;
+}
+
+function updateModalStatusButtons() {
+  if (!currentModalItem) return;
+  const st = STATUS[currentModalItem.title];
+  const wantBtn = document.getElementById('mBtnWant');
+  const seenBtn = document.getElementById('mBtnWatched');
+  wantBtn.className = 'modal-status-btn' + (st === 'want' ? ' active-want' : '');
+  wantBtn.textContent = st === 'want' ? '★ On Watchlist' : '★ Add to Watchlist';
+  seenBtn.className = 'modal-status-btn' + (st === 'watched' ? ' active-watched' : '');
+  seenBtn.textContent = st === 'watched' ? '✓ Watched' : '✓ Mark as Watched';
+}
+
+function modalToggleStatus(status) {
+  if (!currentModalItem) return;
+  quickStatus(currentModalItem.title, status);
+  updateModalStatusButtons();
+}
+
+function renderModalStars(r) {
+  const row = document.getElementById('mStarRow');
+  row.innerHTML = [1,2,3,4,5].map(n =>
+    `<button class="star-btn ${n <= r ? 'filled' : ''}"
+      onclick="setModalRating(${n})"
+      onmouseover="previewStars(${n})"
+      onmouseout="renderModalStars(pendingRating)">${n <= r ? '★' : '☆'}</button>`
+  ).join('');
+}
+
+function previewStars(n) {
+  document.getElementById('mStarRow').querySelectorAll('.star-btn').forEach((b, i) => {
+    b.classList.toggle('filled', i < n);
+    b.textContent = i < n ? '★' : '☆';
+  });
+}
+
+function setModalRating(n) {
+  pendingRating = pendingRating === n ? 0 : n;
+  renderModalStars(pendingRating);
+}
+
+function saveModalMeta() {
+  if (!currentModalItem) return;
+  const note = document.getElementById('mNote').value.trim();
+  if (pendingRating || note) {
+    META[currentModalItem.title] = { rating: pendingRating, note };
+  } else {
+    delete META[currentModalItem.title];
+  }
+  saveMeta();
+  const saved = document.getElementById('mSaved');
+  saved.style.display = 'inline';
+  setTimeout(() => { saved.style.display = 'none'; }, 2000);
+  runSearch();
+}
 
 // ============================================================
 // AI CHAT
@@ -223,6 +509,7 @@ async function sendAIMessage() {
   addMsg('user',`<div class="msg-bubble">${x(text)}</div>`);
   addMsg('assistant','<div class="thinking" id="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
   aiConv.push({role:'user',content:text+ctx});
+  saveAIConv();
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -232,8 +519,10 @@ async function sendAIMessage() {
     if(d.error) throw new Error(d.error.message);
     const reply = d.content?.[0]?.text||'No response.';
     aiConv.push({role:'assistant',content:reply});
+    saveAIConv();
     document.getElementById('thinking').outerHTML=`<div class="msg assistant"><div class="msg-bubble">${fmt(reply)}</div></div>`;
     aiAvailable=true; updateAIStatus();
+    updateChatControls();
   } catch(err) {
     document.getElementById('thinking').outerHTML=`<div class="msg assistant"><div class="msg-bubble"><p>⚠️ AI unavailable. <a href="#" onclick="switchTab('browse');return false;" style="color:var(--accent)">Switch to Browse &amp; Search →</a></p></div></div>`;
     aiAvailable=false; updateAIStatus();
@@ -241,8 +530,82 @@ async function sendAIMessage() {
   aiLoading=false; document.getElementById('sendBtn').disabled=false;
 }
 
+function updateChatControls() {
+  const ctrl = document.getElementById('chatControls');
+  if (!ctrl) return;
+  ctrl.style.display = 'flex';
+  const pairs = Math.floor(aiConv.length / 2);
+  document.getElementById('chatHistoryNote').textContent =
+    `CONTINUING SESSION · ${pairs} EXCHANGE${pairs !== 1 ? 'S' : ''}`;
+}
+
+function restoreAIConversation() {
+  if (!aiConv.length) return;
+  const msgs = document.getElementById('messages');
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+  for (let i = 0; i < aiConv.length; i++) {
+    const msg = aiConv[i];
+    if (msg.role === 'user') {
+      addMsg('user', `<div class="msg-bubble">${x(msg.content.replace(/\[Mood:[^\]]*\]|\[Types:[^\]]*\]/g,'').trim())}</div>`);
+    } else if (msg.role === 'assistant') {
+      addMsg('assistant', `<div class="msg-bubble">${fmt(msg.content)}</div>`);
+    }
+  }
+  updateChatControls();
+}
+
+function newConversation() {
+  aiConv = [];
+  saveAIConv();
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = `<div class="welcome" id="welcome">
+    <div class="welcome-icon">🎬</div>
+    <h2>What Are You In The Mood For?</h2>
+    <p>Tell me a vibe, genre, or something you loved. I know your entire library and I'll find exactly what you need.</p>
+    <div class="quick-prompts">
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Something like No Country for Old Men</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best horror I might have missed</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Great standup for tonight</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">A documentary that'll change how I think</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">90s movies I should revisit</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best thing to binge this weekend</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Essential titles missing from my library</div>
+      <div class="quick-prompt" onclick="sendQuickPrompt(this)">Best music documentary I have</div>
+    </div>
+  </div>`;
+  const ctrl = document.getElementById('chatControls');
+  if (ctrl) ctrl.style.display = 'none';
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
+
+  if (e.key === '/' && !inInput) {
+    e.preventDefault();
+    switchTab('browse');
+    document.getElementById('searchInput').focus();
+  }
+
+  if (e.key === 'Escape') {
+    if (document.getElementById('detailModal').style.display !== 'none') {
+      closeModal();
+    } else if (!inInput) {
+      clearAllFilters();
+    } else {
+      document.activeElement.blur();
+    }
+  }
+});
+
 // ============================================================
 // INIT
 // ============================================================
+loadPersisted();
+restoreAIConversation();
 checkAI();
 runSearch();

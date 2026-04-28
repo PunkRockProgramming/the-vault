@@ -473,11 +473,199 @@
     padding: 16px 20px; color: var(--muted);
     font-family: 'Space Mono', monospace; font-size: 0.62rem;
   }
+
+  /* SIDEBAR TOGGLE */
+  .sidebar-toggle {
+    display: none;
+    background: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 9px;
+    color: var(--text); font-size: 1rem; cursor: pointer;
+  }
+
+  /* CARD STATUS STATES */
+  .result-card.is-watched { border-color: rgba(76,175,80,0.3); opacity: 0.7; }
+  .result-card.is-want { border-color: rgba(232,255,71,0.45); }
+
+  /* CARD ACTIONS */
+  .rc-actions { display: flex; gap: 5px; margin-top: 6px; }
+  .rc-action {
+    flex: 1; text-align: center;
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 6px;
+    font-size: 0.6rem; cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.15s; user-select: none;
+    color: var(--muted);
+  }
+  .rc-action:hover { border-color: var(--accent); color: var(--accent); }
+  .rc-action.status-want { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.08); }
+  .rc-action.status-watched { border-color: #4caf50; color: #4caf50; background: rgba(76,175,80,0.08); }
+
+  /* CARD RATING */
+  .rc-rating { font-size: 0.65rem; color: var(--accent); letter-spacing: 1px; margin-top: 2px; }
+
+  /* LIST VIEW */
+  .results-grid.list-view { grid-template-columns: 1fr; }
+  .results-grid.list-view .result-card {
+    flex-direction: row; align-items: center; gap: 12px; padding: 9px 13px;
+  }
+  .results-grid.list-view .rc-cat { min-width: 80px; }
+  .results-grid.list-view .rc-title { flex: 1; }
+  .results-grid.list-view .rc-tags { display: none; }
+  .results-grid.list-view .rc-actions { margin-top: 0; }
+  .results-grid.list-view .rc-rating { display: none; }
+
+  /* STATUS FILTER ROW */
+  .status-filter-row {
+    display: flex; gap: 7px; flex-wrap: wrap;
+    padding: 8px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+    align-items: center;
+  }
+  .status-btn {
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 0.7rem; cursor: pointer;
+    transition: all 0.15s; color: var(--muted);
+    font-family: 'Space Mono', monospace; user-select: none; white-space: nowrap;
+  }
+  .status-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .status-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+  /* TOOLBAR EXTRAS */
+  .toolbar-btn {
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.62rem;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* CHAT CONTROLS */
+  .chat-controls {
+    display: none; flex-shrink: 0;
+    padding: 7px 26px; gap: 12px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    align-items: center;
+    font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--muted);
+  }
+  .chat-controls button {
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px;
+    color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.6rem;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .chat-controls button:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* DETAIL MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 1000; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-inner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 620px;
+    max-height: 85vh; overflow-y: auto; padding: 26px;
+    position: relative;
+  }
+  .modal-inner::-webkit-scrollbar { width: 3px; }
+  .modal-inner::-webkit-scrollbar-thumb { background: var(--border); }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none;
+    color: var(--muted); font-size: 1.3rem; cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-cat {
+    font-family: 'Space Mono', monospace; font-size: 0.6rem;
+    color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem;
+    letter-spacing: 2px; color: var(--text); line-height: 1.1; margin-bottom: 5px;
+  }
+  .modal-meta {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); margin-bottom: 11px;
+  }
+  .modal-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 16px; }
+  .modal-status-row { display: flex; gap: 9px; margin-bottom: 18px; }
+  .modal-status-btn {
+    flex: 1; padding: 9px 12px; text-align: center;
+    background: var(--pill-bg); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); transition: all 0.15s;
+  }
+  .modal-status-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-status-btn.active-want { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.08); }
+  .modal-status-btn.active-watched { border-color: #4caf50; color: #4caf50; background: rgba(76,175,80,0.08); }
+  .modal-section-label {
+    font-family: 'Space Mono', monospace; font-size: 0.58rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;
+  }
+  .star-row { display: flex; gap: 4px; margin-bottom: 14px; }
+  .star-btn {
+    background: none; border: none; font-size: 1.4rem;
+    cursor: pointer; color: var(--muted); transition: color 0.1s; padding: 0 2px;
+  }
+  .star-btn.filled { color: var(--accent); }
+  .star-btn:hover { color: var(--accent); }
+  .modal-note {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
+    resize: vertical; min-height: 60px;
+    transition: border-color 0.15s; margin-bottom: 8px;
+  }
+  .modal-note:focus { outline: none; border-color: var(--accent); }
+  .modal-note::placeholder { color: var(--muted); }
+  .modal-save-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .modal-save-btn {
+    background: var(--accent); color: #000;
+    border: none; border-radius: 7px; padding: 7px 16px;
+    font-family: 'Space Mono', monospace; font-size: 0.65rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .modal-save-btn:hover { opacity: 0.85; }
+  .modal-saved { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #4caf50; }
+  .similar-list { display: flex; flex-direction: column; gap: 6px; }
+  .similar-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .similar-item:hover { border-color: var(--accent); }
+  .similar-item-icon { font-size: 0.9rem; flex-shrink: 0; }
+  .similar-item-title { flex: 1; font-size: 0.82rem; color: var(--text); }
+  .similar-item-meta { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); white-space: nowrap; }
+
+  /* MOBILE */
+  @media (max-width: 700px) {
+    .sidebar-toggle { display: block; }
+    .sidebar {
+      position: fixed; top: 0; left: -260px;
+      height: 100vh; z-index: 900; width: 240px;
+      background: var(--surface); transition: left 0.25s ease; padding-top: 60px;
+    }
+    .sidebar.open { left: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+    header { padding: 10px 16px; }
+    .tagline { display: none; }
+    .stats-bar { padding: 6px 16px; }
+    .browse-toolbar { padding: 9px 14px; }
+    .filter-row, .status-filter-row { padding: 7px 14px; }
+    .results-grid { padding: 10px 14px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
   <h1>THE VAULT</h1>
   <div class="tagline">PERSONAL MEDIA ORACLE</div>
   <div class="header-right">
@@ -495,6 +683,8 @@
   <div class="stat">🎵 <strong>52</strong> Music Docs</div>
   <div class="stat">🎥 <strong>118</strong> Docs</div>
   <div class="stat">📦 <strong>3,319</strong> Total</div>
+  <div class="stat" id="statWatchlist" style="display:none">★ <strong id="wlCount">0</strong> Watchlist</div>
+  <div class="stat" id="statWatched" style="display:none">✓ <strong id="wdCount">0</strong> Watched</div>
 </div>
 
 <div class="tabs">
@@ -547,6 +737,10 @@
   <!-- AI PANEL -->
   <div class="panel active" id="panelAI">
     <div class="chat-area">
+      <div id="chatControls" class="chat-controls">
+        <span id="chatHistoryNote">CONTINUING SESSION</span>
+        <button onclick="newConversation()">NEW CHAT</button>
+      </div>
       <div id="offlineBanner" style="display:none" class="offline-banner">
         ⚠️ AI is unavailable right now. Use Browse &amp; Search to explore your library manually.
         <button onclick="switchTab('browse')">GO TO BROWSE →</button>
@@ -595,6 +789,16 @@
           <option value="2020">2020s</option>
         </select>
         <button class="surprise-btn" onclick="surpriseMe()">🎲 SURPRISE ME</button>
+        <select id="sortSelect" onchange="setSortMode(this.value)">
+          <option value="default">Default Order</option>
+          <option value="year-desc">Year ↓</option>
+          <option value="year-asc">Year ↑</option>
+          <option value="az">A–Z</option>
+          <option value="za">Z–A</option>
+        </select>
+        <button class="toolbar-btn" id="viewToggleBtn" onclick="toggleView()">☰ LIST</button>
+        <button class="surprise-btn" onclick="surpriseMeWatchlist()">★ RANDOM FROM LIST</button>
+        <button class="toolbar-btn" onclick="exportWatchlist()">⬇ EXPORT</button>
       </div>
 
       <div class="filter-row">
@@ -609,6 +813,14 @@
         <div class="filter-btn" onclick="toggleGenre(this,'crime')">Crime</div>
       </div>
 
+      <div class="status-filter-row">
+        <span class="filter-row-label">STATUS:</span>
+        <div class="status-btn active" id="sfAll" onclick="setStatusFilter('all')">All</div>
+        <div class="status-btn" id="sfUnwatched" onclick="setStatusFilter('unwatched')">Unwatched</div>
+        <div class="status-btn" id="sfWant" onclick="setStatusFilter('want')">★ Watchlist</div>
+        <div class="status-btn" id="sfWatched" onclick="setStatusFilter('watched')">✓ Watched</div>
+      </div>
+
       <div class="results-meta">
         <span id="resultsMeta">Loading…</span>
         <button class="clear-btn" onclick="clearAllFilters()">✕ CLEAR FILTERS</button>
@@ -618,6 +830,30 @@
     </div>
   </div>
 
+</div>
+
+<div id="detailModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-cat" id="mCat"></div>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-meta" id="mMeta"></div>
+    <div class="modal-tags" id="mTags"></div>
+    <div class="modal-status-row">
+      <div class="modal-status-btn" id="mBtnWant" onclick="modalToggleStatus('want')">★ Add to Watchlist</div>
+      <div class="modal-status-btn" id="mBtnWatched" onclick="modalToggleStatus('watched')">✓ Mark as Watched</div>
+    </div>
+    <div class="modal-section-label">YOUR RATING</div>
+    <div class="star-row" id="mStarRow"></div>
+    <div class="modal-section-label">NOTES</div>
+    <textarea class="modal-note" id="mNote" placeholder="Personal notes…" rows="3"></textarea>
+    <div class="modal-save-row">
+      <button class="modal-save-btn" onclick="saveModalMeta()">SAVE</button>
+      <span class="modal-saved" id="mSaved" style="display:none">✓ Saved</span>
+    </div>
+    <div class="modal-section-label">SIMILAR TITLES</div>
+    <div class="similar-list" id="mSimilar"></div>
+  </div>
 </div>
 
 <script src="library.js"></script>
