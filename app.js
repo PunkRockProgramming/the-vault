@@ -14,6 +14,11 @@ Object.entries(RAW).forEach(([cat, titles]) => {
   });
 });
 
+// Show AI features only when running locally
+const AI_ENABLED = location.hostname === 'localhost' ||
+                   location.hostname === '127.0.0.1' ||
+                   location.protocol === 'file:';
+
 // ============================================================
 // STATE
 // ============================================================
@@ -650,6 +655,12 @@ document.addEventListener('keydown', e => {
 // INIT
 // ============================================================
 loadPersisted();
-restoreAIConversation();
-checkAI();
+if (AI_ENABLED) {
+  restoreAIConversation();
+  checkAI();
+} else {
+  document.getElementById('tabAI').style.display = 'none';
+  document.getElementById('aiQuickModes').style.display = 'none';
+  switchTab('browse');
+}
 runSearch();
