@@ -400,7 +400,7 @@ function renderResults(results) {
 
     const seenBtn = document.createElement('div');
     seenBtn.className = 'rc-action' + (st === 'watched' ? ' status-watched' : '');
-    seenBtn.textContent = st === 'watched' ? '✓ Seen' : '✓ Seen';
+    seenBtn.textContent = st === 'watched' ? '✓ Seen' : 'Mark Seen';
     seenBtn.addEventListener('click', e => { e.stopPropagation(); quickStatus(item.title, 'watched'); });
     actions.appendChild(seenBtn);
 
