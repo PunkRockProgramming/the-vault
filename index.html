@@ -514,6 +514,11 @@
   .rc-personal { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .rc-stars { font-size: 0.65rem; color: var(--accent); letter-spacing: 1px; }
   .rc-has-note { font-size: 0.65rem; color: var(--muted); }
+  .rc-wiz { font-size: 0.6rem; letter-spacing: 0.5px; color: var(--muted); }
+  .wiz-log-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .wiz-skulls { font-size: 0.9rem; letter-spacing: 1px; }
+  .wiz-date { font-size: 0.75rem; color: var(--muted); font-family: 'Courier Prime', monospace; }
+  .wiz-reaction { font-size: 0.85rem; color: var(--fg); font-style: italic; margin-bottom: 8px; }
 
   /* LIST VIEW */
   .results-grid.list-view { grid-template-columns: 1fr; }
@@ -865,6 +870,8 @@
       <button class="modal-save-btn" onclick="saveModalMeta()">SAVE</button>
       <span class="modal-saved" id="mSaved" style="display:none">✓ Saved</span>
     </div>
+    <div class="modal-section-label" id="mWizLogLabel" style="display:none">WIZ LOG</div>
+    <div id="mWizLog" style="display:none"></div>
     <div class="modal-section-label">SIMILAR TITLES</div>
     <div class="similar-list" id="mSimilar"></div>
   </div>
@@ -872,6 +879,7 @@
 
 <script src="metadata.js"></script>
 <script src="library.js"></script>
+<script src="wiz-watched.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
