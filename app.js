@@ -130,14 +130,22 @@ function updateAIStatus() {
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const sidebar = document.querySelector('.sidebar');
   if (tab === 'ai') {
     document.getElementById('tabAI').classList.add('active');
     document.getElementById('panelAI').classList.add('active');
     document.getElementById('aiQuickModes').style.display = '';
+    sidebar.style.display = '';
+  } else if (tab === 'fall') {
+    document.getElementById('tabFall').classList.add('active');
+    document.getElementById('panelFall').classList.add('active');
+    sidebar.style.display = 'none';
+    renderFall();
   } else {
     document.getElementById('tabBrowse').classList.add('active');
     document.getElementById('panelBrowse').classList.add('active');
     document.getElementById('aiQuickModes').style.display = 'none';
+    sidebar.style.display = '';
     runSearch();
   }
 }
@@ -722,6 +730,111 @@ function newConversation() {
   </div>`;
   const ctrl = document.getElementById('chatControls');
   if (ctrl) ctrl.style.display = 'none';
+}
+
+// ============================================================
+// FALL 2026
+// ============================================================
+function xa(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+const FALL_PLATFORM_LABELS = { netflix: 'Netflix', apple: 'Apple TV', hboMax: 'HBO Max', peacock: 'Peacock' };
+
+function fallOwnedPill(item) {
+  const yearHtml = item.year ? `<span class="fall-pill-year">${item.year}</span>` : '';
+  const libItem = item.libraryKey && ALL.find(i => i.title === item.libraryKey);
+  if (libItem) {
+    return `<span class="fall-pill owned" title="${xa(item.note || '')}" data-fall-key="${xa(item.libraryKey)}">${x(item.title)}${yearHtml}</span>`;
+  }
+  return `<span class="fall-pill missing" title="${xa(item.note || '')}">${x(item.title)}${yearHtml}</span>`;
+}
+
+function fallMissingPill(item) {
+  const yearHtml = item.year ? `<span class="fall-pill-year">${item.year}</span>` : '';
+  const tip = [item.platform, item.note].filter(Boolean).join(' — ');
+  return `<span class="fall-pill missing" title="${xa(tip)}">${item.focused ? '⚡ ' : ''}${x(item.title)}${yearHtml}</span>`;
+}
+
+function fallListItem(item) {
+  const metaParts = [];
+  if (item.year) metaParts.push(item.year);
+  if (item.platform) metaParts.push(item.platform);
+  if (item.date) metaParts.push(item.date);
+  const star = item.fillsGap ? '<span class="fall-item-star">⭐</span> ' : '';
+  const focused = item.focused ? '⚡ ' : '';
+  const libItem = item.libraryKey && ALL.find(i => i.title === item.libraryKey);
+  return `
+    <div class="fall-item${item.fillsGap ? ' fills-gap' : ''}${libItem ? ' fall-clickable' : ''}"${libItem ? ` data-fall-key="${xa(item.libraryKey)}"` : ''}>
+      <div class="fall-item-top">
+        <span class="fall-item-title">${star}${focused}${x(item.title)}</span>
+        ${metaParts.length ? `<span class="fall-item-meta">${x(metaParts.join(' · '))}</span>` : ''}
+      </div>
+      ${item.note ? `<div class="fall-item-note">${x(item.note)}</div>` : ''}
+    </div>`;
+}
+
+let fallListenerBound = false;
+function renderFall() {
+  const el = document.getElementById('fallContent');
+  if (!el || typeof FALL_2026 === 'undefined') return;
+
+  const parts = [];
+
+  parts.push(`
+    <div class="fall-intro">
+      <h2>🍂 Fall 2026 — Spooky Season by Theme</h2>
+      <p>${x(FALL_2026.intro)}</p>
+      <div class="fall-checked">Checked ${x(FALL_2026.checkedDate)}</div>
+    </div>
+    <div class="fall-start-here"><strong>Start here:</strong> ${x(FALL_2026.startHere)}</div>`);
+
+  FALL_2026.themes.forEach(theme => {
+    parts.push(`
+      <div class="fall-section">
+        <div class="fall-section-header">
+          <span class="fall-section-num">${theme.n}</span>
+          <span class="fall-section-title">${x(theme.title)}</span>
+        </div>
+        <div class="fall-section-tagline">${x(theme.tagline)}</div>
+        <div class="fall-group-label">In the Vault</div>
+        <div class="fall-pills">${theme.owned.map(fallOwnedPill).join('')}</div>
+        <div class="fall-group-label">Missing</div>
+        ${theme.missingNote ? `<div class="fall-missing-note">${x(theme.missingNote)}</div>` : ''}
+        <div class="fall-pills">${theme.missing.map(fallMissingPill).join('')}</div>
+      </div>`);
+  });
+
+  parts.push(`
+    <div class="fall-section">
+      <div class="fall-section-header"><span class="fall-section-title">New This Season</span></div>
+      <div class="fall-list">${FALL_2026.newThisSeason.map(fallListItem).join('')}</div>
+    </div>`);
+
+  parts.push(`
+    <div class="fall-section">
+      <div class="fall-section-header"><span class="fall-section-title">📺 Where to Stream It — Our Services</span></div>
+      <div class="fall-section-tagline">${x(FALL_2026.streaming.note)}</div>
+      ${Object.keys(FALL_PLATFORM_LABELS).map(key => `
+        <div class="fall-streaming-group">
+          <h3>${FALL_PLATFORM_LABELS[key]}</h3>
+          <div class="fall-list">${FALL_2026.streaming[key].map(fallListItem).join('')}</div>
+        </div>`).join('')}
+    </div>`);
+
+  el.innerHTML = parts.join('');
+
+  if (!fallListenerBound) {
+    el.addEventListener('click', e => {
+      const target = e.target.closest('[data-fall-key]');
+      if (!target) return;
+      const libItem = ALL.find(i => i.title === target.dataset.fallKey);
+      if (libItem) openModal(libItem);
+    });
+    fallListenerBound = true;
+  }
 }
 
 // ============================================================
