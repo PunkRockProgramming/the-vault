@@ -791,6 +791,15 @@ function renderFall() {
     </div>
     <div class="fall-start-here"><strong>Start here:</strong> ${x(FALL_2026.startHere)}</div>`);
 
+  if (FALL_2026.halloweenWeek) {
+    parts.push(`
+    <div class="fall-section">
+      <div class="fall-section-header"><span class="fall-section-title">🎃 Halloween Week</span></div>
+      <div class="fall-section-tagline">${x(FALL_2026.halloweenWeek.note)}</div>
+      <div class="fall-list">${FALL_2026.halloweenWeek.items.map(fallListItem).join('')}</div>
+    </div>`);
+  }
+
   FALL_2026.themes.forEach(theme => {
     parts.push(`
       <div class="fall-section">
